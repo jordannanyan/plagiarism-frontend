@@ -38,6 +38,8 @@ function getTitle(pathname: string) {
   if (pathname === "/mahasiswa") return "Dashboard";
   if (pathname.startsWith("/mahasiswa/documents")) return "My Documents";
   if (pathname.startsWith("/mahasiswa/checks")) return "My Checks";
+  if (pathname.startsWith("/mahasiswa/inbox")) return "Inbox Verifikasi";
+  if (pathname.startsWith("/mahasiswa/profile")) return "Edit Profil";
   return "Mahasiswa";
 }
 
@@ -97,8 +99,16 @@ export default function MahasiswaLayout() {
               {user?.email ?? "-"}
             </div>
 
-            <div className="mt-3 inline-flex items-center rounded-full bg-white px-2 py-1 text-xs font-semibold text-zinc-700 border">
-              Role: {user?.role ?? "-"}
+            <div className="mt-3 flex items-center justify-between">
+              <div className="inline-flex items-center rounded-full bg-white px-2 py-1 text-xs font-semibold text-zinc-700 border">
+                Role: {user?.role ?? "-"}
+              </div>
+              <Link
+                to="/mahasiswa/profile"
+                className="text-xs font-medium text-zinc-500 hover:text-zinc-900"
+              >
+                Edit Profil
+              </Link>
             </div>
           </div>
 
@@ -111,6 +121,7 @@ export default function MahasiswaLayout() {
               icon="📄"
             />
             <SidebarItem to="/mahasiswa/checks" label="My Checks" icon="✅" />
+            <SidebarItem to="/mahasiswa/inbox" label="Inbox Verifikasi" icon="📬" />
           </div>
 
           {/* Divider */}

@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 
@@ -29,6 +29,7 @@ function titleFromPath(path: string) {
     if (path.startsWith("/dosen/documents")) return "User Documents";
     if (path.startsWith("/dosen/checks")) return "Checks";
     if (path.startsWith("/dosen/verifikasi") || path.startsWith("/dosen/verification")) return "Verification";
+    if (path.startsWith("/dosen/profile")) return "Edit Profil";
     return "Dosen";
 }
 
@@ -81,8 +82,16 @@ export default function DosenLayout() {
                     <div className="rounded-2xl border bg-zinc-50 p-4">
                         <div className="text-sm font-semibold text-zinc-900">{user?.name ?? "-"}</div>
                         <div className="mt-0.5 text-xs text-zinc-500">{user?.email ?? "-"}</div>
-                        <div className="mt-3 inline-flex items-center rounded-full bg-white px-2 py-1 text-xs font-semibold text-zinc-700 border">
-                            Role: {user?.role ?? "-"}
+                        <div className="mt-3 flex items-center justify-between">
+                            <div className="inline-flex items-center rounded-full bg-white px-2 py-1 text-xs font-semibold text-zinc-700 border">
+                                Role: {user?.role ?? "-"}
+                            </div>
+                            <Link
+                                to="/dosen/profile"
+                                className="text-xs font-medium text-zinc-500 hover:text-zinc-900"
+                            >
+                                Edit Profil
+                            </Link>
                         </div>
                     </div>
 

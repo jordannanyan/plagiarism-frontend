@@ -59,3 +59,33 @@ export async function upsertVerificationNote(
   const { data } = await api.post(`/api/verification/${resultId}`, payload);
   return data;
 }
+
+export type InboxRow = {
+  id_result: number;
+  similarity: number;
+  result_created_at: string;
+  id_check: number;
+  doc_id: number;
+  doc_title: string;
+  finished_at: string;
+  id_note: number;
+  verification_status: VerificationStatus;
+  note_text: string;
+  note_created_at: string;
+  verifier_name: string;
+  verifier_nidn: string;
+  verifier_email: string;
+};
+
+export async function getMyInbox(params?: {
+  limit?: number;
+  offset?: number;
+  status?: VerificationStatus;
+}) {
+  const { data } = await api.get("/api/verification/my-inbox", { params });
+  return {
+    ok: Boolean(data?.ok),
+    total: Number(data?.total ?? 0),
+    rows: (Array.isArray(data?.rows) ? data.rows : []) as InboxRow[],
+  };
+}

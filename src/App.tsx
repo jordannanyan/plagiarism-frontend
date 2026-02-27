@@ -16,11 +16,14 @@ import AdminCorpusPage from "./pages/admin/AdminCorpusPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminPoliciesPage from "./pages/admin/AdminPoliciesPage";
 import AdminParamsPage from "./pages/admin/AdminParamsPage";
+import AdminProfilePage from "./pages/admin/AdminProfilePage";
+import AdminAuditPage from "./pages/admin/AdminAuditPage";
 
 import DosenHomePage from "./pages/dosen/DosenHomePage";
 import DosenVerificationPage from "./pages/dosen/DosenVerifikasiPage";
 import DosenDocumentsPage from "./pages/dosen/DosenDocumentsPage";
 import DosenChecksPage from "./pages/dosen/DosenChecksPage";
+import DosenProfilePage from "./pages/dosen/DosenProfilePage";
 
 import MahasiswaDashboard from "./pages/mahasiswa/MahasiswaHomePage";
 import MahasiswaDocumentsPage from "./pages/mahasiswa/MahasiswaDocumentsPage";
@@ -28,6 +31,8 @@ import MahasiswaDocumentDetailPage from "./pages/mahasiswa/MahasiswaDocumentDeta
 import MahasiswaChecksPage from "./pages/mahasiswa/MahasiswaCheckPage";
 import MahasiswaCheckCreatePage from "./pages/mahasiswa/MahasiswaCheckCreatePage";
 import MahasiswaCheckDetailPage from "./pages/mahasiswa/MahasiswaCheckDetailPage";
+import MahasiswaProfilePage from "./pages/mahasiswa/MahasiswaProfilePage";
+import MahasiswaInboxPage from "./pages/mahasiswa/MahasiswaInboxPage";
 
 export default function App() {
   return (
@@ -61,6 +66,8 @@ export default function App() {
           <Route path="users" element={<AdminUsersPage />} />
           <Route path="policies" element={<AdminPoliciesPage />} />
           <Route path="params" element={<AdminParamsPage />} />
+          <Route path="audit" element={<AdminAuditPage />} />
+          <Route path="profile" element={<AdminProfilePage />} />
         </Route>
 
         {/* DOSEN */}
@@ -78,6 +85,7 @@ export default function App() {
           <Route path="verifikasi" element={<DosenVerificationPage />} />
           <Route path="/dosen/documents" element={<DosenDocumentsPage />} />
           <Route path="/dosen/checks" element={<DosenChecksPage />} />
+          <Route path="profile" element={<DosenProfilePage />} />
         </Route>
 
         {/* MAHASISWA */}
@@ -99,6 +107,8 @@ export default function App() {
           <Route path="checks" element={<MahasiswaChecksPage />} />
           <Route path="checks/new" element={<MahasiswaCheckCreatePage />} />
           <Route path="checks/:id" element={<MahasiswaCheckDetailPage />} />
+          <Route path="inbox" element={<MahasiswaInboxPage />} />
+          <Route path="profile" element={<MahasiswaProfilePage />} />
 
         </Route>
 

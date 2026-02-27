@@ -8,6 +8,7 @@ type AuthState = {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (updates: Partial<User>) => void;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -87,6 +88,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(fixedUser);
   }
 
+  function updateUser(updates: Partial<User>) {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...updates };
+      localStorage.setItem("user", JSON.stringify(next));
+      return next;
+    });
+  }
+
   async function logout() {
     try {
       await logoutApi();
@@ -100,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const value = useMemo(
-    () => ({ token, user, loading, login, logout }),
+    () => ({ token, user, loading, login, logout, updateUser }),
     [token, user, loading]
   );
 

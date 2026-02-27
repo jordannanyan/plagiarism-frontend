@@ -38,6 +38,8 @@ function getTitle(pathname: string) {
     if (pathname === "/admin") return "Dashboard";
     if (pathname.startsWith("/admin/corpus")) return "Corpus";
     if (pathname.startsWith("/admin/users")) return "Users";
+    if (pathname.startsWith("/admin/audit")) return "Audit Log";
+    if (pathname.startsWith("/admin/profile")) return "Edit Profil";
     return "Admin";
 }
 
@@ -97,8 +99,16 @@ export default function AdminLayout() {
                             {user?.email ?? "-"}
                         </div>
 
-                        <div className="mt-3 inline-flex items-center rounded-full bg-white px-2 py-1 text-xs font-semibold text-zinc-700 border">
-                            Role: {user?.role ?? "-"}
+                        <div className="mt-3 flex items-center justify-between">
+                            <div className="inline-flex items-center rounded-full bg-white px-2 py-1 text-xs font-semibold text-zinc-700 border">
+                                Role: {user?.role ?? "-"}
+                            </div>
+                            <Link
+                                to="/admin/profile"
+                                className="text-xs font-medium text-zinc-500 hover:text-zinc-900"
+                            >
+                                Edit Profil
+                            </Link>
                         </div>
                     </div>
 
@@ -109,6 +119,7 @@ export default function AdminLayout() {
                         <SidebarItem to="/admin/users" label="Users" icon="👤" />
                         <SidebarItem to="/admin/policies" label="Policies" icon="🛡" />
                         <SidebarItem to="/admin/params" label="Params" icon="⚙" />
+                        <SidebarItem to="/admin/audit" label="Audit Log" icon="📋" />
                     </div>
 
                     {/* Divider */}

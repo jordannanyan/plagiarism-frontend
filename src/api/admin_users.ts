@@ -8,11 +8,21 @@ export type AdminUserRow = {
   is_active: 0 | 1;
   created_at?: string;
   updated_at?: string;
-  // optional extra fields dari backend kamu, aman kalau ada
   nim?: string | null;
   nidn?: string | null;
+  dosen_nama?: string | null;
+  dosen_telp?: string | null;
   prodi?: string | null;
   angkatan?: number | null;
+};
+
+export type PatchUserPayload = {
+  name?: string;
+  email?: string;
+  password?: string;
+  is_active?: 0 | 1;
+  dosen?: { nidn?: string; nama?: string; telp?: string };
+  mahasiswa?: { nim?: string; prodi?: string; angkatan?: number | null };
 };
 
 export async function adminListUsers(): Promise<AdminUserRow[]> {
@@ -28,15 +38,33 @@ export async function adminListUsers(): Promise<AdminUserRow[]> {
     updated_at: r.updated_at,
     nim: r.nim ?? null,
     nidn: r.nidn ?? null,
+    dosen_nama: r.dosen_nama ?? null,
+    dosen_telp: r.dosen_telp ?? null,
     prodi: r.prodi ?? null,
     angkatan: r.angkatan ?? null,
   }));
 }
 
-export async function adminPatchUser(
-  id: number,
-  payload: Partial<Pick<AdminUserRow, "name" | "email" | "role" | "is_active">>
-) {
+export async function adminPatchUser(id: number, payload: PatchUserPayload) {
   const { data } = await api.patch(`/api/admin/users/${id}`, payload);
+  return data;
+}
+
+export async function adminDeleteUser(id: number) {
+  const { data } = await api.delete(`/api/admin/users/${id}`);
+  return data;
+}
+
+export type CreateUserPayload = {
+  role: "dosen" | "mahasiswa";
+  name: string;
+  email: string;
+  password: string;
+  dosen?: { nidn?: string; nama?: string; telp?: string };
+  mahasiswa?: { nim?: string; prodi?: string; angkatan?: number | null };
+};
+
+export async function adminCreateUser(payload: CreateUserPayload) {
+  const { data } = await api.post("/api/admin/users", payload);
   return data;
 }
