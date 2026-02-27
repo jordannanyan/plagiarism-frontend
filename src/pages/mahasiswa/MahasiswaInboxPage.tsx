@@ -1,6 +1,24 @@
 import { useEffect, useState } from "react";
 import { getMyInbox, type InboxRow, type VerificationStatus } from "../../api/verification";
 
+// ── localStorage helpers ──────────────────────────────────────────────────────
+const STORAGE_KEY = "mhs_inbox_read";
+
+function loadReadIds(): Set<number> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const arr = raw ? (JSON.parse(raw) as number[]) : [];
+    return new Set(arr);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveReadIds(ids: Set<number>) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
+}
+
+// ── Utility ───────────────────────────────────────────────────────────────────
 function cn(...s: Array<string | false | null | undefined>) {
   return s.filter(Boolean).join(" ");
 }
@@ -12,6 +30,7 @@ function fmtDate(s?: string | null) {
   return d.toLocaleString();
 }
 
+// ── Pills ─────────────────────────────────────────────────────────────────────
 function SimilarityPill({ value }: { value: number }) {
   const cls =
     value >= 70
@@ -28,11 +47,11 @@ function SimilarityPill({ value }: { value: number }) {
 
 function StatusPill({ value }: { value: VerificationStatus }) {
   const map: Record<VerificationStatus, { label: string; cls: string }> = {
-    wajar: { label: "Wajar", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+    wajar:        { label: "Wajar",        cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
     perlu_revisi: { label: "Perlu Revisi", cls: "bg-amber-50 text-amber-700 border-amber-200" },
-    plagiarisme: { label: "Plagiarisme", cls: "bg-red-50 text-red-700 border-red-200" },
+    plagiarisme:  { label: "Plagiarisme",  cls: "bg-red-50 text-red-700 border-red-200" },
   };
-  const { label, cls } = map[value] ?? { label: value, cls: "bg-zinc-100 text-zinc-700" };
+  const { label, cls } = map[value] ?? { label: value, cls: "bg-zinc-100 text-zinc-700 border-zinc-200" };
   return (
     <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold", cls)}>
       {label}
@@ -40,16 +59,37 @@ function StatusPill({ value }: { value: VerificationStatus }) {
   );
 }
 
-function InboxCard({ row }: { row: InboxRow }) {
+// ── Card ──────────────────────────────────────────────────────────────────────
+function InboxCard({
+  row,
+  isRead,
+  onMarkRead,
+}: {
+  row: InboxRow;
+  isRead: boolean;
+  onMarkRead: () => void;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="rounded-2xl border bg-white shadow-sm overflow-hidden">
+    <div
+      className={cn(
+        "rounded-2xl border bg-white shadow-sm overflow-hidden transition-colors",
+        !isRead && "border-l-4 border-l-blue-500"
+      )}
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-3 p-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm font-semibold text-zinc-900 truncate">{row.doc_title}</span>
+            {!isRead && (
+              <span className="inline-flex items-center rounded-full bg-blue-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                BARU
+              </span>
+            )}
+            <span className={cn("text-sm font-semibold truncate", isRead ? "text-zinc-500" : "text-zinc-900")}>
+              {row.doc_title}
+            </span>
             <SimilarityPill value={row.similarity} />
             <StatusPill value={row.verification_status} />
           </div>
@@ -62,12 +102,24 @@ function InboxCard({ row }: { row: InboxRow }) {
           </div>
         </div>
 
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="shrink-0 rounded-lg border px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-50"
-        >
-          {expanded ? "Tutup" : "Lihat Catatan"}
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {isRead ? (
+            <span className="text-xs text-zinc-400">✓ Dibaca</span>
+          ) : (
+            <button
+              onClick={onMarkRead}
+              className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
+            >
+              Sudah Dibaca
+            </button>
+          )}
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="rounded-lg border px-2 py-1 text-xs font-medium text-zinc-600 hover:bg-zinc-50"
+          >
+            {expanded ? "Tutup" : "Lihat Catatan"}
+          </button>
+        </div>
       </div>
 
       {/* Expanded note */}
@@ -86,12 +138,16 @@ function InboxCard({ row }: { row: InboxRow }) {
   );
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default function MahasiswaInboxPage() {
   const [rows, setRows] = useState<InboxRow[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<VerificationStatus | "all">("all");
+  const [readIds, setReadIds] = useState<Set<number>>(loadReadIds);
+
+  const unreadCount = rows.filter((r) => !readIds.has(r.id_result)).length;
 
   async function load() {
     setLoading(true);
@@ -116,6 +172,24 @@ export default function MahasiswaInboxPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
+  function markRead(id: number) {
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      saveReadIds(next);
+      return next;
+    });
+  }
+
+  function markAllRead() {
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      rows.forEach((r) => next.add(r.id_result));
+      saveReadIds(next);
+      return next;
+    });
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -125,17 +199,30 @@ export default function MahasiswaInboxPage() {
           <p className="mt-1 text-sm text-zinc-500">
             Hasil verifikasi dari dosen untuk laporan yang kamu submit.{" "}
             {total > 0 && (
-              <span className="font-semibold text-zinc-900">{total} verifikasi diterima.</span>
+              <span className="font-semibold text-zinc-900">{total} verifikasi diterima</span>
+            )}
+            {unreadCount > 0 && (
+              <span className="ml-1 text-blue-600 font-semibold">· {unreadCount} belum dibaca</span>
             )}
           </p>
         </div>
 
-        <button
-          onClick={load}
-          className="rounded-xl border px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-        >
-          Refresh
-        </button>
+        <div className="flex gap-2">
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllRead}
+              className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+            >
+              Tandai Semua Dibaca
+            </button>
+          )}
+          <button
+            onClick={load}
+            className="rounded-xl border px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Filter */}
@@ -182,7 +269,12 @@ export default function MahasiswaInboxPage() {
       ) : (
         <div className="space-y-3">
           {rows.map((row) => (
-            <InboxCard key={row.id_result} row={row} />
+            <InboxCard
+              key={row.id_result}
+              row={row}
+              isRead={readIds.has(row.id_result)}
+              onMarkRead={() => markRead(row.id_result)}
+            />
           ))}
         </div>
       )}

@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { getMyInbox } from "../api/verification";
 
 function cn(...s: Array<string | false | null | undefined>) {
   return s.filter(Boolean).join(" ");
@@ -10,10 +11,12 @@ function SidebarItem({
   to,
   label,
   icon,
+  badge,
 }: {
   to: string;
   label: string;
   icon?: React.ReactNode;
+  badge?: number;
 }) {
   return (
     <NavLink
@@ -29,7 +32,12 @@ function SidebarItem({
       }
     >
       <span className="text-base">{icon}</span>
-      <span>{label}</span>
+      <span className="flex-1">{label}</span>
+      {badge != null && badge > 0 && (
+        <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white min-w-[18px] text-center">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
     </NavLink>
   );
 }
@@ -47,8 +55,23 @@ export default function MahasiswaLayout() {
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [inboxCount, setInboxCount] = useState(0);
 
   const pageTitle = useMemo(() => getTitle(pathname), [pathname]);
+
+  useEffect(() => {
+    getMyInbox({ limit: 100, offset: 0 })
+      .then((res) => {
+        try {
+          const raw = localStorage.getItem("mhs_inbox_read");
+          const readIds = new Set<number>(raw ? (JSON.parse(raw) as number[]) : []);
+          setInboxCount(res.rows.filter((r) => !readIds.has(r.id_result)).length);
+        } catch {
+          setInboxCount(res.total);
+        }
+      })
+      .catch(() => {});
+  }, [pathname]);
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -121,7 +144,7 @@ export default function MahasiswaLayout() {
               icon="📄"
             />
             <SidebarItem to="/mahasiswa/checks" label="My Checks" icon="✅" />
-            <SidebarItem to="/mahasiswa/inbox" label="Inbox Verifikasi" icon="📬" />
+            <SidebarItem to="/mahasiswa/inbox" label="Inbox Verifikasi" icon="📬" badge={inboxCount} />
           </div>
 
           {/* Divider */}
