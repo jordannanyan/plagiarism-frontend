@@ -332,7 +332,7 @@ export default function AdminParamsPage() {
                     </tr>
                   ) : (
                     historySorted.map((x) => {
-                      const isActive = x.active_to == null; // asumsi active_to null = aktif
+                      const isActive = active.some((a) => a.id === x.id);
                       return (
                         <tr key={x.id} className="border-t">
                           <td className="px-3 py-2 text-zinc-800">{x.id}</td>

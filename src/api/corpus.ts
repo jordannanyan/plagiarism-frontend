@@ -21,10 +21,24 @@ function mapCorpusRow(r: any): CorpusItem {
 }
 
 export async function getCorpus() {
-  // asumsi endpoint kamu: GET /api/corpus
-  const { data } = await api.get<CorpusListResponse>("/api/corpus");
-  const rows = Array.isArray((data as any)?.rows) ? (data as any).rows : [];
-  return rows.map(mapCorpusRow);
+  const PAGE = 100;
+  let offset = 0;
+  let allRows: any[] = [];
+
+  while (true) {
+    const { data } = await api.get<CorpusListResponse>("/api/corpus", {
+      params: { limit: PAGE, offset },
+    });
+    const rows = Array.isArray(data?.rows) ? data.rows : [];
+    allRows = allRows.concat(rows);
+
+    const total = data?.total ?? rows.length;
+    offset += rows.length;
+
+    if (rows.length === 0 || offset >= total) break;
+  }
+
+  return allRows.map(mapCorpusRow).sort((a, b) => a.id - b.id);
 }
 
 export async function uploadCorpus(file: File, title: string) {
