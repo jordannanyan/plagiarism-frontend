@@ -54,3 +54,8 @@ export async function activateParams(id: number) {
   const { data } = await api.patch(`/api/admin/params/${id}/activate`);
   return data;
 }
+
+export async function deleteParams(id: number) {
+  const { data } = await api.delete(`/api/admin/params/${id}`);
+  return data;
+}

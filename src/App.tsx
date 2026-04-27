@@ -21,8 +21,8 @@ import AdminAuditPage from "./pages/admin/AdminAuditPage";
 
 import DosenHomePage from "./pages/dosen/DosenHomePage";
 import DosenVerificationPage from "./pages/dosen/DosenVerifikasiPage";
-import DosenDocumentsPage from "./pages/dosen/DosenDocumentsPage";
-import DosenChecksPage from "./pages/dosen/DosenChecksPage";
+import DosenPendingDocsPage from "./pages/dosen/DosenPendingDocsPage";
+import DosenCheckedDocsPage from "./pages/dosen/DosenCheckedDocsPage";
 import DosenProfilePage from "./pages/dosen/DosenProfilePage";
 
 import MahasiswaDashboard from "./pages/mahasiswa/MahasiswaHomePage";
@@ -83,8 +83,8 @@ export default function App() {
         >
           <Route index element={<DosenHomePage />} />
           <Route path="verifikasi" element={<DosenVerificationPage />} />
-          <Route path="/dosen/documents" element={<DosenDocumentsPage />} />
-          <Route path="/dosen/checks" element={<DosenChecksPage />} />
+          <Route path="pending" element={<DosenPendingDocsPage />} />
+          <Route path="checked" element={<DosenCheckedDocsPage />} />
           <Route path="profile" element={<DosenProfilePage />} />
         </Route>
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { activateParams, createParams, getActiveParams, getAllParams, type SysParams } from "../../api/params";
+import { activateParams, createParams, deleteParams, getActiveParams, getAllParams, type SysParams } from "../../api/params";
 
 function cn(...s: Array<string | false | null | undefined>) {
   return s.filter(Boolean).join(" ");
@@ -116,6 +116,30 @@ export default function AdminParamsPage() {
       setErr(
         e?.response?.data?.message ??
           "Gagal activate params. Cek endpoint PATCH /api/admin/params/:id/activate (atau sesuaikan di api/params.ts)"
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onDelete(id: number) {
+    setErr(null);
+    setOkMsg(null);
+
+    const ok = confirm(
+      "Hapus params ini? Hanya bisa dihapus jika belum pernah dipakai untuk check."
+    );
+    if (!ok) return;
+
+    setSaving(true);
+    try {
+      await deleteParams(id);
+      setOkMsg("Params berhasil dihapus.");
+      await refresh();
+    } catch (e: any) {
+      setErr(
+        e?.response?.data?.message ??
+          "Gagal menghapus params (cek apakah masih dirujuk check_request)."
       );
     } finally {
       setSaving(false);
@@ -314,7 +338,7 @@ export default function AdminParamsPage() {
                     <th className="px-3 py-2">base</th>
                     <th className="px-3 py-2">threshold</th>
                     <th className="px-3 py-2 w-[120px]">Status</th>
-                    <th className="px-3 py-2 w-[140px]">Aksi</th>
+                    <th className="px-3 py-2 w-[200px]">Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -351,18 +375,37 @@ export default function AdminParamsPage() {
                             </span>
                           </td>
                           <td className="px-3 py-2">
-                            <button
-                              onClick={() => onActivate(x.id)}
-                              disabled={saving || isActive}
-                              className={cn(
-                                "rounded-lg border px-2 py-1 text-xs font-medium",
-                                isActive
-                                  ? "cursor-not-allowed bg-zinc-50 text-zinc-400"
-                                  : "text-zinc-700 hover:bg-zinc-50"
-                              )}
-                            >
-                              Activate
-                            </button>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => onActivate(x.id)}
+                                disabled={saving || isActive}
+                                className={cn(
+                                  "rounded-lg border px-2 py-1 text-xs font-medium",
+                                  isActive
+                                    ? "cursor-not-allowed bg-zinc-50 text-zinc-400"
+                                    : "text-zinc-700 hover:bg-zinc-50"
+                                )}
+                              >
+                                Activate
+                              </button>
+                              <button
+                                onClick={() => onDelete(x.id)}
+                                disabled={saving || isActive}
+                                title={
+                                  isActive
+                                    ? "Nonaktifkan params dulu sebelum menghapus"
+                                    : "Hapus params (hanya bisa jika belum pernah dipakai check)"
+                                }
+                                className={cn(
+                                  "rounded-lg border px-2 py-1 text-xs font-medium",
+                                  isActive
+                                    ? "cursor-not-allowed bg-zinc-50 text-zinc-400 border-zinc-200"
+                                    : "border-rose-200 text-rose-700 hover:bg-rose-50"
+                                )}
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );

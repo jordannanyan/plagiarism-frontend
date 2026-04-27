@@ -176,6 +176,7 @@ export async function mhCreateCheck(params: {
   token: string;
   doc_id: number;
   max_candidates?: number;
+  target_dosen?: number[];
 }) {
   return fetchJson<CreateCheckResponse>(`/api/checks`, {
     method: "POST",
@@ -183,6 +184,7 @@ export async function mhCreateCheck(params: {
     body: {
       doc_id: params.doc_id,
       max_candidates: params.max_candidates,
+      target_dosen: params.target_dosen,
     },
   });
 }

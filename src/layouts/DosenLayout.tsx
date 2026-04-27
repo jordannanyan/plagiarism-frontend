@@ -1,12 +1,23 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { getDosenPendingDocs } from "../api/dosen";
 
 function cn(...s: Array<string | false | null | undefined>) {
     return s.filter(Boolean).join(" ");
 }
 
-function Item({ to, label, icon }: { to: string; label: string; icon?: React.ReactNode }) {
+function Item({
+    to,
+    label,
+    icon,
+    badge,
+}: {
+    to: string;
+    label: string;
+    icon?: React.ReactNode;
+    badge?: number;
+}) {
     return (
         <NavLink
             to={to}
@@ -19,15 +30,20 @@ function Item({ to, label, icon }: { to: string; label: string; icon?: React.Rea
             }
         >
             <span className="text-base">{icon}</span>
-            <span>{label}</span>
+            <span className="flex-1">{label}</span>
+            {badge != null && badge > 0 && (
+                <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white min-w-[18px] text-center">
+                    {badge > 99 ? "99+" : badge}
+                </span>
+            )}
         </NavLink>
     );
 }
 
 function titleFromPath(path: string) {
     if (path === "/dosen") return "Dashboard";
-    if (path.startsWith("/dosen/documents")) return "User Documents";
-    if (path.startsWith("/dosen/checks")) return "Checks";
+    if (path.startsWith("/dosen/pending")) return "Dokumen Belum Diperiksa";
+    if (path.startsWith("/dosen/checked")) return "Dokumen Sudah Diperiksa";
     if (path.startsWith("/dosen/verifikasi") || path.startsWith("/dosen/verification")) return "Verification";
     if (path.startsWith("/dosen/profile")) return "Edit Profil";
     return "Dosen";
@@ -37,8 +53,15 @@ export default function DosenLayout() {
     const { user, logout } = useAuth();
     const { pathname } = useLocation();
     const [open, setOpen] = useState(false);
+    const [pendingCount, setPendingCount] = useState(0);
 
     const title = useMemo(() => titleFromPath(pathname), [pathname]);
+
+    useEffect(() => {
+        getDosenPendingDocs({ limit: 1, offset: 0 })
+            .then((res) => setPendingCount(res.total))
+            .catch(() => {});
+    }, [pathname]);
 
     return (
         <div className="min-h-screen bg-zinc-50">
@@ -97,8 +120,13 @@ export default function DosenLayout() {
 
                     <div className="mt-4 space-y-1">
                         <Item to="/dosen" label="Dashboard" icon="🏠" />
-                        <Item to="/dosen/documents" label="User Documents" icon="📄" />
-                        <Item to="/dosen/checks" label="Checks" icon="✅" />
+                        <Item
+                            to="/dosen/pending"
+                            label="Belum Diperiksa"
+                            icon="📥"
+                            badge={pendingCount}
+                        />
+                        <Item to="/dosen/checked" label="Sudah Diperiksa" icon="✅" />
                         <Item to="/dosen/verifikasi" label="Verification" icon="🧾" />
                     </div>
 
