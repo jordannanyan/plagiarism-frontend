@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { getDosenPendingDocs, type DosenPendingDocRow } from "../../api/dosen";
+import { upsertVerificationNote, type VerificationStatus } from "../../api/verification";
 
 function cn(...s: Array<string | false | null | undefined>) {
   return s.filter(Boolean).join(" ");
@@ -24,6 +24,120 @@ function SimilarityPill({ value }: { value?: number }) {
   );
 }
 
+function VerifyModal({
+  row,
+  onClose,
+  onSaved,
+}: {
+  row: DosenPendingDocRow;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [status, setStatus] = useState<VerificationStatus>("perlu_revisi");
+  const [noteText, setNoteText] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    if (!noteText.trim() && status !== "wajar") {
+      setErr("Catatan wajib diisi untuk status selain 'wajar'.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await upsertVerificationNote(row.id_result, { status, note_text: noteText.trim() });
+      onSaved();
+    } catch (e: any) {
+      setErr(e?.response?.data?.message ?? "Gagal menyimpan verifikasi");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+        <div className="flex items-start justify-between border-b px-5 py-4">
+          <div>
+            <div className="text-base font-semibold text-zinc-900">Verifikasi Dokumen</div>
+            <div className="mt-1 text-xs text-zinc-500">
+              {row.requester_name} {row.requester_nim ? `(${row.requester_nim})` : ""} • {row.doc_title}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg border px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-50"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="space-y-4 p-5">
+          <div className="rounded-xl border bg-zinc-50 p-3 text-xs text-zinc-600">
+            <div>
+              Similarity: <SimilarityPill value={row.similarity} />
+            </div>
+            <div className="mt-1">Selesai check: {fmtDate(row.finished_at)}</div>
+          </div>
+
+          {err && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {err}
+            </div>
+          )}
+
+          <div className="grid gap-3 md:grid-cols-3">
+            <div>
+              <label className="block text-sm font-medium text-zinc-800">Status</label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as VerificationStatus)}
+                className="mt-1 w-full rounded-xl border bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-900/10"
+              >
+                <option value="wajar">wajar</option>
+                <option value="perlu_revisi">perlu_revisi</option>
+                <option value="plagiarisme">plagiarisme</option>
+              </select>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-zinc-800">Catatan</label>
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                rows={5}
+                className="mt-1 w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-900/10"
+                placeholder="Tulis catatan verifikasi..."
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+            >
+              Batal
+            </button>
+            <button
+              disabled={saving}
+              className={cn(
+                "rounded-xl px-4 py-2 text-sm font-semibold text-white",
+                saving ? "bg-zinc-400 cursor-not-allowed" : "bg-zinc-900 hover:bg-zinc-800"
+              )}
+            >
+              {saving ? "Menyimpan..." : "Simpan Verifikasi"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function DosenPendingDocsPage() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -31,6 +145,7 @@ export default function DosenPendingDocsPage() {
   const [total, setTotal] = useState(0);
   const [q, setQ] = useState("");
   const [qDebounced, setQDebounced] = useState("");
+  const [picked, setPicked] = useState<DosenPendingDocRow | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setQDebounced(q.trim()), 300);
@@ -127,12 +242,12 @@ export default function DosenPendingDocsPage() {
                   <td className="px-3 py-2"><SimilarityPill value={r.similarity} /></td>
                   <td className="px-3 py-2 text-zinc-600">{fmtDate(r.finished_at)}</td>
                   <td className="px-3 py-2">
-                    <Link
-                      to={`/dosen/verifikasi?result=${r.id_result}`}
+                    <button
+                      onClick={() => setPicked(r)}
                       className="rounded-lg border px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50"
                     >
                       Verifikasi
-                    </Link>
+                    </button>
                   </td>
                 </tr>
               ))
@@ -140,6 +255,17 @@ export default function DosenPendingDocsPage() {
           </tbody>
         </table>
       </div>
+
+      {picked && (
+        <VerifyModal
+          row={picked}
+          onClose={() => setPicked(null)}
+          onSaved={() => {
+            setPicked(null);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }

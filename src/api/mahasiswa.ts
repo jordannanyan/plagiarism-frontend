@@ -87,6 +87,12 @@ export type CheckMatchRow = {
   corpus_title?: string | null;
 };
 
+export type ExcludedRange = {
+  start: number;
+  end: number;
+  reason: string;
+};
+
 export type CheckDetailResponse = {
   ok: true;
   check: {
@@ -104,6 +110,7 @@ export type CheckDetailResponse = {
   result: CheckResult | null;
   matches: CheckMatchRow[];
   doc_preview_text: string | null;
+  excluded_ranges?: ExcludedRange[];
 };
 
 export async function mhListDocuments(params: {

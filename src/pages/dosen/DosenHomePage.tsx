@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { dosenGetChecks, dosenGetDocuments, type DosenCheckRow, type DosenDocRow } from "../../api/dosen";
-import { getVerificationResults, type VerificationResultRow, type VerificationStatus } from "../../api/verification";
+import {
+  dosenGetChecks,
+  dosenGetDocuments,
+  getDosenCheckedDocs,
+  getDosenPendingDocs,
+  type DosenCheckRow,
+  type DosenCheckedDocRow,
+  type DosenDocRow,
+  type DosenPendingDocRow,
+} from "../../api/dosen";
+import type { VerificationStatus } from "../../api/verification";
 
 function cn(...s: Array<string | false | null | undefined>) {
   return s.filter(Boolean).join(" ");
@@ -70,24 +79,24 @@ type LatestVerByResultId = Record<
   }
 >;
 
-function buildLatestVerByResult(rows: VerificationResultRow[]): LatestVerByResultId {
-  // result_id unique, tapi kalau ada duplikat, pilih note terbaru
+function buildLatestVerByResult(
+  pendingRows: DosenPendingDocRow[],
+  checkedRows: DosenCheckedDocRow[]
+): LatestVerByResultId {
   const map: LatestVerByResultId = {};
-  for (const r of rows) {
-    const rid = Number(r.id_result);
-    if (!Number.isFinite(rid)) continue;
-
-    const prev = map[rid];
-    const tPrev = prev?.note_created_at ? new Date(prev.note_created_at).getTime() : -1;
-    const tCur = r.note_created_at ? new Date(r.note_created_at).getTime() : -1;
-
-    if (!prev || tCur >= tPrev) {
-      map[rid] = {
-        verification_status: r.verification_status ?? null,
-        note_text: r.note_text ?? null,
-        note_created_at: r.note_created_at ?? null,
-      };
-    }
+  for (const r of pendingRows) {
+    map[Number(r.id_result)] = {
+      verification_status: null,
+      note_text: null,
+      note_created_at: null,
+    };
+  }
+  for (const r of checkedRows) {
+    map[Number(r.id_result)] = {
+      verification_status: r.verification_status,
+      note_text: r.note_text,
+      note_created_at: r.note_created_at,
+    };
   }
   return map;
 }
@@ -99,35 +108,38 @@ export default function DosenHomePage() {
   const [documents, setDocuments] = useState<DosenDocRow[]>([]);
   const [checks, setChecks] = useState<DosenCheckRow[]>([]);
 
-  // ✅ NEW: verification results (pending + done)
-  const [verRows, setVerRows] = useState<VerificationResultRow[]>([]);
-  const verByResultId = useMemo(() => buildLatestVerByResult(verRows), [verRows]);
+  // dokumen mahasiswa yang menargetkan dosen ini (pending + checked)
+  const [pendingDocs, setPendingDocs] = useState<DosenPendingDocRow[]>([]);
+  const [checkedDocs, setCheckedDocs] = useState<DosenCheckedDocRow[]>([]);
+  const verByResultId = useMemo(
+    () => buildLatestVerByResult(pendingDocs, checkedDocs),
+    [pendingDocs, checkedDocs]
+  );
 
   async function load() {
     setErr(null);
     setLoading(true);
 
-    const [dRes, cRes, vRes] = await Promise.allSettled([
+    const [dRes, cRes, pRes, kRes] = await Promise.allSettled([
       dosenGetDocuments(),
       dosenGetChecks(),
-      getVerificationResults({ limit: 200, offset: 0 }), // endpoint baru: /api/verification/results
+      getDosenPendingDocs({ limit: 200, offset: 0 }),
+      getDosenCheckedDocs({ limit: 200, offset: 0 }),
     ]);
 
     if (dRes.status === "fulfilled") setDocuments(Array.isArray(dRes.value) ? dRes.value : []);
     if (cRes.status === "fulfilled") setChecks(Array.isArray(cRes.value) ? cRes.value : []);
 
-    if (vRes.status === "fulfilled") {
-      const rows = Array.isArray(vRes.value?.rows) ? vRes.value.rows : [];
-      setVerRows(rows);
-    } else {
-      // kalau endpoint verifikasi belum ada, jangan bikin dashboard crash
-      setVerRows([]);
-    }
+    if (pRes.status === "fulfilled") setPendingDocs(pRes.value.rows);
+    else setPendingDocs([]);
+
+    if (kRes.status === "fulfilled") setCheckedDocs(kRes.value.rows);
+    else setCheckedDocs([]);
 
     if (dRes.status === "rejected" || cRes.status === "rejected") {
       setErr("Sebagian data gagal dimuat. Pastikan backend running dan token valid.");
-    } else if (vRes.status === "rejected") {
-      setErr("Documents & Checks berhasil, tapi data verifikasi gagal dimuat. Pastikan endpoint /api/verification/results tersedia.");
+    } else if (pRes.status === "rejected" || kRes.status === "rejected") {
+      setErr("Documents & Checks berhasil, tapi data verifikasi gagal dimuat.");
     }
 
     setLoading(false);
@@ -161,19 +173,13 @@ export default function DosenHomePage() {
       .slice(0, 5);
   }, [documents]);
 
-  // ✅ NEW counts verification
-  const verPendingCount = useMemo(() => {
-    // pending = ada result tapi belum ada note (verification_status null)
-    return verRows.filter((r) => r.verification_status == null).length;
-  }, [verRows]);
-
-  const verDoneCount = useMemo(() => {
-    return verRows.filter((r) => r.verification_status != null).length;
-  }, [verRows]);
-
-  const verNeedRevisionCount = useMemo(() => {
-    return verRows.filter((r) => r.verification_status === "perlu_revisi").length;
-  }, [verRows]);
+  // counts verifikasi — hanya dokumen yang menargetkan dosen ini
+  const verPendingCount = pendingDocs.length;
+  const verDoneCount = checkedDocs.length;
+  const verNeedRevisionCount = useMemo(
+    () => checkedDocs.filter((r) => r.verification_status === "perlu_revisi").length,
+    [checkedDocs]
+  );
 
   return (
     <div className="space-y-6">
@@ -306,7 +312,8 @@ export default function DosenHomePage() {
 
           <p className="mt-3 text-xs text-zinc-500">
             Endpoints: <span className="font-mono">GET /api/checks</span>,{" "}
-            <span className="font-mono">GET /api/verification/results</span>
+            <span className="font-mono">GET /api/dosen/docs/pending</span>,{" "}
+            <span className="font-mono">GET /api/dosen/docs/checked</span>
           </p>
         </div>
 

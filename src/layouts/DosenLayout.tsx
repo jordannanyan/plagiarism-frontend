@@ -44,7 +44,6 @@ function titleFromPath(path: string) {
     if (path === "/dosen") return "Dashboard";
     if (path.startsWith("/dosen/pending")) return "Dokumen Belum Diperiksa";
     if (path.startsWith("/dosen/checked")) return "Dokumen Sudah Diperiksa";
-    if (path.startsWith("/dosen/verifikasi") || path.startsWith("/dosen/verification")) return "Verification";
     if (path.startsWith("/dosen/profile")) return "Edit Profil";
     return "Dosen";
 }
@@ -127,7 +126,6 @@ export default function DosenLayout() {
                             badge={pendingCount}
                         />
                         <Item to="/dosen/checked" label="Sudah Diperiksa" icon="✅" />
-                        <Item to="/dosen/verifikasi" label="Verification" icon="🧾" />
                     </div>
 
                     <div className="my-4 h-px bg-zinc-200" />

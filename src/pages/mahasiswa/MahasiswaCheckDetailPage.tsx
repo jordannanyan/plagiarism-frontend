@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { mhGetCheck, type CheckMatchRow } from "../../api/mahasiswa";
+import { mhGetCheck, type CheckMatchRow, type ExcludedRange } from "../../api/mahasiswa";
 import { Badge } from "../../components/ui";
 
 function fmtDate(s?: string | null) {
@@ -22,7 +22,7 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
-type Span = { start: number; end: number };
+type Span = { start: number; end: number; kind: "match" | "excluded" };
 
 function buildHighlightSpans(matches: CheckMatchRow[], previewLen: number): Span[] {
   // merge spans (limit to previewLen)
@@ -30,6 +30,7 @@ function buildHighlightSpans(matches: CheckMatchRow[], previewLen: number): Span
     .map((m) => ({
       start: clamp(m.doc_span_start, 0, previewLen),
       end: clamp(m.doc_span_end, 0, previewLen),
+      kind: "match" as const,
     }))
     .filter((s) => s.end > s.start)
     .sort((a, b) => a.start - b.start);
@@ -50,6 +51,48 @@ function buildHighlightSpans(matches: CheckMatchRow[], previewLen: number): Span
   return merged;
 }
 
+function mergeSpans(matchSpans: Span[], excludedRanges: ExcludedRange[], textLen: number): Span[] {
+  const ex: Span[] = (excludedRanges ?? [])
+    .map((r) => ({
+      start: clamp(r.start, 0, textLen),
+      end: clamp(r.end, 0, textLen),
+      kind: "excluded" as const,
+    }))
+    .filter((s) => s.end > s.start);
+
+  // excluded > match: jika overlap, area excluded menang
+  const all = [...matchSpans, ...ex].sort((a, b) => a.start - b.start);
+  const out: Span[] = [];
+  for (const s of all) {
+    const last = out[out.length - 1];
+    if (!last || s.start >= last.end) {
+      out.push({ ...s });
+      continue;
+    }
+    // overlap: prioritaskan excluded
+    if (last.kind === s.kind) {
+      last.end = Math.max(last.end, s.end);
+    } else if (s.kind === "excluded") {
+      // potong match yg overlap
+      if (s.start <= last.start) {
+        last.start = Math.min(last.start, s.start);
+        last.kind = "excluded";
+        last.end = Math.max(last.end, s.end);
+      } else {
+        // truncate last match dan push excluded
+        const oldEnd = last.end;
+        last.end = s.start;
+        out.push({ start: s.start, end: Math.max(s.end, oldEnd), kind: "excluded" });
+      }
+    } else {
+      // s is match, last is excluded → skip area excluded
+      if (s.end <= last.end) continue;
+      out.push({ start: last.end, end: s.end, kind: "match" });
+    }
+  }
+  return out;
+}
+
 function renderHighlighted(text: string, spans: Span[]) {
   if (!spans.length) return <span>{text}</span>;
 
@@ -57,19 +100,29 @@ function renderHighlighted(text: string, spans: Span[]) {
   let cur = 0;
 
   spans.forEach((s, i) => {
-    const a = s.start;
-    const b = s.end;
+    const a = clamp(s.start, 0, text.length);
+    const b = clamp(s.end, 0, text.length);
+    if (b <= a) return;
     if (a > cur) {
       parts.push(<span key={`t-${i}-a`}>{text.slice(cur, a)}</span>);
     }
-    parts.push(
-      <mark
-        key={`m-${i}`}
-        className="rounded-sm bg-amber-200/70 px-0.5"
-      >
-        {text.slice(a, b)}
-      </mark>
-    );
+    if (s.kind === "match") {
+      parts.push(
+        <mark key={`m-${i}`} className="rounded-sm bg-amber-200/70 px-0.5">
+          {text.slice(a, b)}
+        </mark>
+      );
+    } else {
+      parts.push(
+        <span
+          key={`x-${i}`}
+          className="rounded-sm bg-zinc-200/70 text-zinc-500 line-through decoration-zinc-400/60 px-0.5"
+          title="Bagian ini tidak ikut dicek oleh sistem"
+        >
+          {text.slice(a, b)}
+        </span>
+      );
+    }
     cur = b;
   });
 
@@ -92,9 +145,10 @@ export default function MahasiswaCheckDetailPage() {
   const [result, setResult] = useState<any>(null);
   const [matches, setMatches] = useState<CheckMatchRow[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
+  const [excludedRanges, setExcludedRanges] = useState<ExcludedRange[]>([]);
 
   const [showPreview, setShowPreview] = useState(true);
-  const [matchesLimit, setMatchesLimit] = useState(50);
+  const matchesLimit = 50;
 
   useEffect(() => {
     let alive = true;
@@ -108,6 +162,7 @@ export default function MahasiswaCheckDetailPage() {
         setResult(res.result);
         setMatches(res.matches || []);
         setPreview(res.doc_preview_text);
+        setExcludedRanges(res.excluded_ranges ?? []);
       } catch (e: any) {
         if (!alive) return;
         setErr(e?.message ?? "Failed to load check");
@@ -127,8 +182,9 @@ export default function MahasiswaCheckDetailPage() {
 
   const spans = useMemo(() => {
     const text = preview ?? "";
-    return buildHighlightSpans(topMatches, text.length);
-  }, [topMatches, preview]);
+    const matchSpans = buildHighlightSpans(topMatches, text.length);
+    return mergeSpans(matchSpans, excludedRanges, text.length);
+  }, [topMatches, preview, excludedRanges]);
 
   if (!Number.isFinite(id_check) || id_check <= 0) {
     return <div className="text-sm text-rose-700">Invalid check id.</div>;
@@ -172,7 +228,7 @@ export default function MahasiswaCheckDetailPage() {
         </div>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-2xl border bg-white p-4">
           <div className="text-sm font-semibold text-zinc-900">Status</div>
           <div className="mt-2">{statusBadge(check?.status ?? "-")}</div>
@@ -194,36 +250,32 @@ export default function MahasiswaCheckDetailPage() {
         </div>
 
         <div className="rounded-2xl border bg-white p-4">
-          <div className="text-sm font-semibold text-zinc-900">Result</div>
+          <div className="text-sm font-semibold text-zinc-900">Hasil Pengecekan</div>
           <div className="mt-2 text-3xl font-bold text-zinc-900">
             {result?.similarity == null ? "-" : `${result.similarity}%`}
           </div>
           <div className="mt-1 text-sm text-zinc-500">Similarity</div>
 
-          <div className="mt-4 rounded-xl border bg-zinc-50 p-3 text-xs text-zinc-600">
-            Summary JSON is stored in <b>check_result.summary_json</b>, you can render it later if needed.
-          </div>
-        </div>
-
-        <div className="rounded-2xl border bg-white p-4">
-          <div className="text-sm font-semibold text-zinc-900">Matches</div>
-          <div className="mt-2 text-3xl font-bold text-zinc-900">{matches.length}</div>
-          <div className="mt-1 text-sm text-zinc-500">Rows in check_match</div>
-
-          <div className="mt-4">
-            <div className="text-xs font-semibold text-zinc-700">Highlight limit</div>
-            <input
-              type="number"
-              min={1}
-              max={200}
-              value={matchesLimit}
-              onChange={(e) => setMatchesLimit(Math.max(1, Math.min(200, Number(e.target.value) || 50)))}
-              className="mt-1 w-full rounded-xl border px-3 py-2 text-sm"
-            />
-            <div className="mt-1 text-xs text-zinc-500">
-              We highlight first N matches (helps performance).
-            </div>
-          </div>
+          {result?.similarity != null && (
+            (() => {
+              const sim = Number(result.similarity);
+              const STANDARD = 30;
+              const over = sim > STANDARD;
+              return (
+                <div
+                  className={
+                    over
+                      ? "mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-800"
+                      : "mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800"
+                  }
+                >
+                  {over
+                    ? `Tingkat plagiarisme pada artikel Anda melebihi batas standar yang ditetapkan (${STANDARD}%). Disarankan untuk melakukan revisi.`
+                    : `Tingkat plagiarisme pada artikel Anda berada di bawah batas standar (${STANDARD}%). Artikel dinyatakan memenuhi kriteria orisinalitas.`}
+                </div>
+              );
+            })()
+          )}
         </div>
       </div>
 
@@ -242,75 +294,32 @@ export default function MahasiswaCheckDetailPage() {
         </div>
         {showPreview ? (
           <div className="p-4">
-            <div className="text-xs text-zinc-500 mb-2">
-              Preview is first ~8000 chars from server. Highlights are based on match spans.
+            <div className="text-xs text-zinc-500 mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span>Seluruh isi dokumen ditampilkan. Highlight kuning = bagian yang cocok dengan corpus.</span>
             </div>
-            <div className="rounded-xl border bg-zinc-50 p-3 text-xs text-zinc-800 max-h-[520px] overflow-auto whitespace-pre-wrap break-words">
+            <div className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              Bagian <b>Nama Penulis</b>, <b>Nama Universitas</b>, dan <b>Daftar Pustaka</b> tidak ikut
+              dicek oleh sistem (ditandai abu-abu dengan coret).
+              {excludedRanges.length > 0 && (
+                <span className="ml-1">
+                  Sistem mendeteksi {excludedRanges.length} bagian yang dilewati: {" "}
+                  {excludedRanges.map((r, i) => (
+                    <span key={i} className="font-medium">
+                      {r.reason}
+                      {i < excludedRanges.length - 1 ? ", " : ""}
+                    </span>
+                  ))}
+                  .
+                </span>
+              )}
+            </div>
+            <div className="rounded-xl border bg-zinc-50 p-3 text-xs text-zinc-800 whitespace-pre-wrap break-words">
               {loading ? "Loading…" : preview ? renderHighlighted(preview, spans) : "(no preview)"}
             </div>
           </div>
         ) : null}
       </div>
 
-      {/* Matches table */}
-      <div className="rounded-2xl border bg-white overflow-hidden">
-        <div className="border-b px-4 py-3 flex items-center justify-between">
-          <div className="text-sm font-semibold text-zinc-900">Matches details</div>
-          <div className="text-xs text-zinc-500">Ordered by match_score</div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-zinc-50 text-zinc-600">
-              <tr>
-                <th className="text-left font-semibold px-4 py-3">Corpus</th>
-                <th className="text-left font-semibold px-4 py-3">Score</th>
-                <th className="text-left font-semibold px-4 py-3">Doc span</th>
-                <th className="text-left font-semibold px-4 py-3">Src span</th>
-                <th className="text-left font-semibold px-4 py-3">Hash</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {loading ? (
-                <tr>
-                  <td className="px-4 py-4 text-zinc-500" colSpan={5}>
-                    Loading…
-                  </td>
-                </tr>
-              ) : matches.length === 0 ? (
-                <tr>
-                  <td className="px-4 py-6 text-zinc-500" colSpan={5}>
-                    No matches rows, either similarity under threshold or no span inserted.
-                  </td>
-                </tr>
-              ) : (
-                matches.map((m) => (
-                  <tr key={m.id_match} className="hover:bg-zinc-50">
-                    <td className="px-4 py-3">
-                      <div className="font-semibold text-zinc-900">
-                        {m.corpus_title ?? `Corpus #${m.source_id}`}
-                      </div>
-                      <div className="text-xs text-zinc-500">
-                        source_id: {m.source_id}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-zinc-700">
-                      {(Math.round((m.match_score ?? 0) * 10000) / 100).toFixed(2)}%
-                    </td>
-                    <td className="px-4 py-3 text-zinc-700">
-                      {m.doc_span_start}–{m.doc_span_end}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-700">
-                      {m.src_span_start}–{m.src_span_end}
-                    </td>
-                    <td className="px-4 py-3 text-zinc-700">{m.snippet_hash}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }

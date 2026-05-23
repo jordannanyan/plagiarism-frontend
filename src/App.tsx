@@ -20,7 +20,6 @@ import AdminProfilePage from "./pages/admin/AdminProfilePage";
 import AdminAuditPage from "./pages/admin/AdminAuditPage";
 
 import DosenHomePage from "./pages/dosen/DosenHomePage";
-import DosenVerificationPage from "./pages/dosen/DosenVerifikasiPage";
 import DosenPendingDocsPage from "./pages/dosen/DosenPendingDocsPage";
 import DosenCheckedDocsPage from "./pages/dosen/DosenCheckedDocsPage";
 import DosenProfilePage from "./pages/dosen/DosenProfilePage";
@@ -82,7 +81,6 @@ export default function App() {
           }
         >
           <Route index element={<DosenHomePage />} />
-          <Route path="verifikasi" element={<DosenVerificationPage />} />
           <Route path="pending" element={<DosenPendingDocsPage />} />
           <Route path="checked" element={<DosenCheckedDocsPage />} />
           <Route path="profile" element={<DosenProfilePage />} />
