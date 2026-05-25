@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { getDosenCheckedDocs, type DosenCheckedDocRow } from "../../api/dosen";
+import {
+  getDosenCheckedDocs,
+  getDosenResultDetail,
+  type DosenCheckedDocRow,
+  type DosenResultDetail,
+} from "../../api/dosen";
 import { upsertVerificationNote, type VerificationStatus } from "../../api/verification";
+import { DocumentPreview } from "../../components/DocumentPreview";
 
 type StatusFilter = "" | "wajar" | "perlu_revisi" | "plagiarisme";
 
@@ -51,6 +57,31 @@ function DetailModal({
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const [detail, setDetail] = useState<DosenResultDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(true);
+  const [detailErr, setDetailErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      setDetailLoading(true);
+      setDetailErr(null);
+      try {
+        const d = await getDosenResultDetail(row.id_result);
+        if (!alive) return;
+        setDetail(d);
+      } catch (e: any) {
+        if (!alive) return;
+        setDetailErr(e?.response?.data?.message ?? "Gagal memuat isi dokumen");
+      } finally {
+        if (alive) setDetailLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [row.id_result]);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -71,8 +102,8 @@ function DetailModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
-        <div className="flex items-start justify-between border-b px-5 py-4">
+      <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-xl">
+        <div className="sticky top-0 z-10 flex items-start justify-between border-b bg-white px-5 py-4">
           <div>
             <div className="text-base font-semibold text-zinc-900">Detail Verifikasi</div>
             <div className="mt-1 text-xs text-zinc-500">
@@ -95,6 +126,22 @@ function DetailModal({
             </div>
             <div>Selesai check: {fmtDate(row.finished_at)}</div>
             <div>Diverifikasi: {fmtDate(row.note_created_at)}</div>
+          </div>
+
+          <div>
+            <div className="mb-2 text-sm font-semibold text-zinc-900">Isi Dokumen Mahasiswa</div>
+            {detailLoading ? (
+              <div className="rounded-xl border bg-zinc-50 p-3 text-xs text-zinc-500">Memuat dokumen...</div>
+            ) : detailErr ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">{detailErr}</div>
+            ) : (
+              <DocumentPreview
+                text={detail?.doc_preview_text ?? null}
+                matches={detail?.matches ?? []}
+                excludedRanges={detail?.excluded_ranges ?? []}
+                maxHeight="max-h-[420px] overflow-auto"
+              />
+            )}
           </div>
 
           {err && (

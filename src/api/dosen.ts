@@ -93,3 +93,56 @@ export async function getDosenCheckedDocs(params?: {
     total: Number(data?.total ?? 0),
   };
 }
+
+export type DosenResultMatchRow = {
+  id_match: number;
+  result_id: number;
+  source_type: string;
+  source_id: number;
+  doc_span_start: number;
+  doc_span_end: number;
+  src_span_start: number;
+  src_span_end: number;
+  match_score: number;
+  snippet_hash: string;
+  corpus_title?: string | null;
+};
+
+export type DosenResultExcludedRange = {
+  start: number;
+  end: number;
+  reason: string;
+};
+
+export type DosenResultDetail = {
+  check: {
+    id_check: number;
+    requested_by: number;
+    doc_id: number;
+    params_id: number;
+    status: string;
+    queued_at: string | null;
+    started_at: string | null;
+    finished_at: string | null;
+    doc_title: string;
+  };
+  result: {
+    id_result: number;
+    similarity: number;
+    created_at: string;
+  };
+  matches: DosenResultMatchRow[];
+  doc_preview_text: string | null;
+  excluded_ranges: DosenResultExcludedRange[];
+};
+
+export async function getDosenResultDetail(resultId: number): Promise<DosenResultDetail> {
+  const { data } = await api.get(`/api/dosen/results/${resultId}/detail`);
+  return {
+    check: data.check,
+    result: data.result,
+    matches: Array.isArray(data?.matches) ? data.matches : [],
+    doc_preview_text: data?.doc_preview_text ?? null,
+    excluded_ranges: Array.isArray(data?.excluded_ranges) ? data.excluded_ranges : [],
+  };
+}
