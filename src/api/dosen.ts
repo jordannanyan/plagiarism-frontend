@@ -134,6 +134,7 @@ export type DosenResultDetail = {
   matches: DosenResultMatchRow[];
   doc_preview_text: string | null;
   excluded_ranges: DosenResultExcludedRange[];
+  exclude_metadata: boolean;
 };
 
 export async function getDosenResultDetail(resultId: number): Promise<DosenResultDetail> {
@@ -144,5 +145,6 @@ export async function getDosenResultDetail(resultId: number): Promise<DosenResul
     matches: Array.isArray(data?.matches) ? data.matches : [],
     doc_preview_text: data?.doc_preview_text ?? null,
     excluded_ranges: Array.isArray(data?.excluded_ranges) ? data.excluded_ranges : [],
+    exclude_metadata: data?.exclude_metadata !== false,
   };
 }

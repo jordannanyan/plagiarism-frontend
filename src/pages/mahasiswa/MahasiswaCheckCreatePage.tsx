@@ -18,6 +18,9 @@ export default function MahasiswaCheckCreatePage() {
   const [targetDosen, setTargetDosen] = useState<number[]>([]);
   const [dosenSearch, setDosenSearch] = useState("");
 
+  // filter teks yang dicek: true = kecualikan penulis/univ/daftar pustaka, false = semua teks
+  const [excludeMetadata, setExcludeMetadata] = useState(true);
+
   const [loadingDocs, setLoadingDocs] = useState(true);
   const [loadingDosen, setLoadingDosen] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -100,6 +103,7 @@ export default function MahasiswaCheckCreatePage() {
         token,
         doc_id: docId,
         target_dosen: targetDosen.length > 0 ? targetDosen : undefined,
+        exclude_metadata: excludeMetadata,
       });
       nav(`/mahasiswa/checks/${res.check_id}`);
     } catch (e: any) {
@@ -168,6 +172,57 @@ export default function MahasiswaCheckCreatePage() {
               <span className="text-xs text-zinc-500">mime: {selected.mime_type}</span>
             </div>
           ) : null}
+        </div>
+
+        <div>
+          <div className="text-sm font-semibold text-zinc-900">Filter Pengecekan</div>
+          <div className="mt-1 text-xs text-zinc-500">
+            Pilih bagian dokumen yang ikut dicek. Anda bisa membandingkan hasil dari kedua mode.
+          </div>
+
+          <div className="mt-2 space-y-2">
+            <label
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${
+                excludeMetadata ? "border-zinc-900 bg-zinc-50" : "hover:bg-zinc-50"
+              }`}
+            >
+              <input
+                type="radio"
+                name="filter_mode"
+                className="mt-0.5 h-4 w-4"
+                checked={excludeMetadata}
+                onChange={() => setExcludeMetadata(true)}
+              />
+              <div>
+                <div className="text-sm font-medium text-zinc-900">
+                  Kecualikan Penulis, Universitas &amp; Daftar Pustaka
+                </div>
+                <div className="text-xs text-zinc-500">
+                  Bagian identitas penulis, afiliasi universitas, dan daftar pustaka tidak ikut dihitung.
+                </div>
+              </div>
+            </label>
+
+            <label
+              className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${
+                !excludeMetadata ? "border-zinc-900 bg-zinc-50" : "hover:bg-zinc-50"
+              }`}
+            >
+              <input
+                type="radio"
+                name="filter_mode"
+                className="mt-0.5 h-4 w-4"
+                checked={!excludeMetadata}
+                onChange={() => setExcludeMetadata(false)}
+              />
+              <div>
+                <div className="text-sm font-medium text-zinc-900">Semua Teks Dicek</div>
+                <div className="text-xs text-zinc-500">
+                  Seluruh isi dokumen ikut dihitung, termasuk identitas penulis dan daftar pustaka.
+                </div>
+              </div>
+            </label>
+          </div>
         </div>
 
         <div>

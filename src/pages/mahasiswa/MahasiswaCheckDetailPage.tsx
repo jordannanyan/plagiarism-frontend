@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { mhGetCheck, type CheckMatchRow, type ExcludedRange } from "../../api/mahasiswa";
 import { Badge } from "../../components/ui";
+import { MatchSources } from "../../components/MatchSources";
 
 function fmtDate(s?: string | null) {
   if (!s) return "-";
@@ -146,6 +147,7 @@ export default function MahasiswaCheckDetailPage() {
   const [matches, setMatches] = useState<CheckMatchRow[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
   const [excludedRanges, setExcludedRanges] = useState<ExcludedRange[]>([]);
+  const [excludeMode, setExcludeMode] = useState(true);
 
   const [showPreview, setShowPreview] = useState(true);
   const matchesLimit = 50;
@@ -163,6 +165,7 @@ export default function MahasiswaCheckDetailPage() {
         setMatches(res.matches || []);
         setPreview(res.doc_preview_text);
         setExcludedRanges(res.excluded_ranges ?? []);
+        setExcludeMode(res.exclude_metadata !== false);
       } catch (e: any) {
         if (!alive) return;
         setErr(e?.message ?? "Failed to load check");
@@ -279,6 +282,9 @@ export default function MahasiswaCheckDetailPage() {
         </div>
       </div>
 
+      {/* Sumber terdeteksi (mirip Turnitin) */}
+      {!loading && <MatchSources matches={matches} />}
+
       {/* Preview + highlight */}
       <div className="rounded-2xl border bg-white overflow-hidden">
         <div className="border-b px-4 py-3 flex items-center justify-between">
@@ -298,19 +304,28 @@ export default function MahasiswaCheckDetailPage() {
               <span>Seluruh isi dokumen ditampilkan. Highlight kuning = bagian yang cocok dengan corpus.</span>
             </div>
             <div className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-              Bagian <b>Nama Penulis</b>, <b>Nama Universitas</b>, dan <b>Daftar Pustaka</b> tidak ikut
-              dicek oleh sistem (ditandai abu-abu dengan coret).
-              {excludedRanges.length > 0 && (
-                <span className="ml-1">
-                  Sistem mendeteksi {excludedRanges.length} bagian yang dilewati: {" "}
-                  {excludedRanges.map((r, i) => (
-                    <span key={i} className="font-medium">
-                      {r.reason}
-                      {i < excludedRanges.length - 1 ? ", " : ""}
+              {excludeMode ? (
+                <>
+                  Mode: <b>kecualikan metadata</b>. Bagian <b>Nama Penulis</b>, <b>Nama Universitas</b>, dan{" "}
+                  <b>Daftar Pustaka</b> tidak ikut dicek oleh sistem (ditandai abu-abu dengan coret).
+                  {excludedRanges.length > 0 && (
+                    <span className="ml-1">
+                      Sistem mendeteksi {excludedRanges.length} bagian yang dilewati:{" "}
+                      {excludedRanges.map((r, i) => (
+                        <span key={i} className="font-medium">
+                          {r.reason}
+                          {i < excludedRanges.length - 1 ? ", " : ""}
+                        </span>
+                      ))}
+                      .
                     </span>
-                  ))}
-                  .
-                </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  Mode: <b>semua teks dicek</b>. Seluruh isi dokumen ikut dihitung, termasuk identitas
+                  penulis dan daftar pustaka.
+                </>
               )}
             </div>
             <div className="rounded-xl border bg-zinc-50 p-3 text-xs text-zinc-800 whitespace-pre-wrap break-words">

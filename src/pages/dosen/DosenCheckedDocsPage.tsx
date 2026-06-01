@@ -7,6 +7,7 @@ import {
 } from "../../api/dosen";
 import { upsertVerificationNote, type VerificationStatus } from "../../api/verification";
 import { DocumentPreview } from "../../components/DocumentPreview";
+import { MatchSources } from "../../components/MatchSources";
 
 type StatusFilter = "" | "wajar" | "perlu_revisi" | "plagiarisme";
 
@@ -135,12 +136,16 @@ function DetailModal({
             ) : detailErr ? (
               <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">{detailErr}</div>
             ) : (
-              <DocumentPreview
-                text={detail?.doc_preview_text ?? null}
-                matches={detail?.matches ?? []}
-                excludedRanges={detail?.excluded_ranges ?? []}
-                maxHeight="max-h-[420px] overflow-auto"
-              />
+              <div className="space-y-3">
+                <MatchSources matches={detail?.matches ?? []} />
+                <DocumentPreview
+                  text={detail?.doc_preview_text ?? null}
+                  matches={detail?.matches ?? []}
+                  excludedRanges={detail?.excluded_ranges ?? []}
+                  excludeMode={detail?.exclude_metadata ?? true}
+                  maxHeight="max-h-[420px] overflow-auto"
+                />
+              </div>
             )}
           </div>
 

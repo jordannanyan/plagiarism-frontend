@@ -61,6 +61,7 @@ export type CreateCheckResponse = {
   result_id: number;
   similarity: number; // percent
   threshold: number; // 0..1
+  exclude_metadata: boolean;
   candidates_count: number;
   matches_inserted: number;
 };
@@ -111,6 +112,7 @@ export type CheckDetailResponse = {
   matches: CheckMatchRow[];
   doc_preview_text: string | null;
   excluded_ranges?: ExcludedRange[];
+  exclude_metadata?: boolean;
 };
 
 export async function mhListDocuments(params: {
@@ -184,6 +186,7 @@ export async function mhCreateCheck(params: {
   doc_id: number;
   max_candidates?: number;
   target_dosen?: number[];
+  exclude_metadata?: boolean;
 }) {
   return fetchJson<CreateCheckResponse>(`/api/checks`, {
     method: "POST",
@@ -192,6 +195,7 @@ export async function mhCreateCheck(params: {
       doc_id: params.doc_id,
       max_candidates: params.max_candidates,
       target_dosen: params.target_dosen,
+      exclude_metadata: params.exclude_metadata,
     },
   });
 }

@@ -115,6 +115,7 @@ export function DocumentPreview({
   excludedRanges,
   matchLimit = 50,
   maxHeight,
+  excludeMode = true,
 }: {
   text: string | null;
   matches: MatchSpan[];
@@ -122,6 +123,8 @@ export function DocumentPreview({
   matchLimit?: number;
   /** opsional, contoh "max-h-[420px] overflow-auto" */
   maxHeight?: string;
+  /** true = mode kecualikan metadata; false = semua teks dicek */
+  excludeMode?: boolean;
 }) {
   const textLen = text?.length ?? 0;
   const matchSpans = buildMatchSpans(matches, textLen, matchLimit);
@@ -130,8 +133,12 @@ export function DocumentPreview({
   return (
     <div>
       <div className="mb-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-        Highlight kuning = bagian yang cocok dengan corpus. Bagian abu-abu bercoret = tidak ikut
-        dicek (Nama Penulis / Nama Universitas / Daftar Pustaka).
+        Highlight kuning = bagian yang cocok dengan corpus.
+        {excludeMode ? (
+          <> Bagian abu-abu bercoret = tidak ikut dicek (Nama Penulis / Nama Universitas / Daftar Pustaka).</>
+        ) : (
+          <> Mode: <b>semua teks dicek</b> — seluruh isi dokumen ikut dihitung.</>
+        )}
       </div>
       <div
         className={[
