@@ -113,7 +113,7 @@ export function DocumentPreview({
   text,
   matches,
   excludedRanges,
-  matchLimit = 50,
+  matchLimit = 1000,
   maxHeight,
   excludeMode = true,
 }: {

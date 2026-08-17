@@ -137,7 +137,11 @@ function DetailModal({
               <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">{detailErr}</div>
             ) : (
               <div className="space-y-3">
-                <MatchSources matches={detail?.matches ?? []} />
+                <MatchSources
+                  sources={detail?.sources ?? []}
+                  matches={detail?.matches ?? []}
+                  threshold={detail?.threshold ?? null}
+                />
                 <DocumentPreview
                   text={detail?.doc_preview_text ?? null}
                   matches={detail?.matches ?? []}

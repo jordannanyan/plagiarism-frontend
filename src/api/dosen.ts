@@ -114,6 +114,15 @@ export type DosenResultExcludedRange = {
   reason: string;
 };
 
+/** Sumber corpus yang dibandingkan, termasuk yang di bawah threshold. */
+export type DosenDetectedSource = {
+  id_corpus: number;
+  title: string;
+  similarity: number; // 0..1
+  above_threshold: boolean;
+  estimated?: boolean;
+};
+
 export type DosenResultDetail = {
   check: {
     id_check: number;
@@ -132,6 +141,8 @@ export type DosenResultDetail = {
     created_at: string;
   };
   matches: DosenResultMatchRow[];
+  sources: DosenDetectedSource[];
+  threshold: number | null; // 0..1
   doc_preview_text: string | null;
   excluded_ranges: DosenResultExcludedRange[];
   exclude_metadata: boolean;
@@ -143,6 +154,8 @@ export async function getDosenResultDetail(resultId: number): Promise<DosenResul
     check: data.check,
     result: data.result,
     matches: Array.isArray(data?.matches) ? data.matches : [],
+    sources: Array.isArray(data?.sources) ? data.sources : [],
+    threshold: data?.threshold ?? null,
     doc_preview_text: data?.doc_preview_text ?? null,
     excluded_ranges: Array.isArray(data?.excluded_ranges) ? data.excluded_ranges : [],
     exclude_metadata: data?.exclude_metadata !== false,

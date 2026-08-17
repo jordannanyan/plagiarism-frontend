@@ -94,6 +94,15 @@ export type ExcludedRange = {
   reason: string;
 };
 
+/** Sumber corpus yang dibandingkan, termasuk yang di bawah threshold. */
+export type DetectedSourceRow = {
+  id_corpus: number;
+  title: string;
+  similarity: number; // 0..1
+  above_threshold: boolean;
+  estimated?: boolean;
+};
+
 export type CheckDetailResponse = {
   ok: true;
   check: {
@@ -110,6 +119,8 @@ export type CheckDetailResponse = {
   };
   result: CheckResult | null;
   matches: CheckMatchRow[];
+  sources?: DetectedSourceRow[];
+  threshold?: number | null; // 0..1
   doc_preview_text: string | null;
   excluded_ranges?: ExcludedRange[];
   exclude_metadata?: boolean;

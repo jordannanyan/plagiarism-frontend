@@ -104,7 +104,7 @@ export default function AdminParamsPage() {
     setErr(null);
     setOkMsg(null);
 
-    const ok = confirm("Jadikan params ini sebagai ACTIVE?");
+    const ok = confirm("Jadikan params ini satu-satunya yang ACTIVE? Params aktif lainnya akan dinonaktifkan.");
     if (!ok) return;
 
     setSaving(true);
@@ -172,6 +172,15 @@ export default function AdminParamsPage() {
       {okMsg && (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
           {okMsg}
+        </div>
+      )}
+
+      {!loading && active.length > 1 && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Terdeteksi <b>{active.length} params aktif</b> sekaligus. Sistem hanya boleh punya satu params
+          aktif — fingerprint dengan k/w berbeda tidak bisa dibandingkan, dan pengecekan hanya akan
+          memakai salah satu (yang paling baru diaktifkan). Klik <b>Activate</b> pada params yang ingin
+          dipakai untuk menonaktifkan sisanya.
         </div>
       )}
 
@@ -357,6 +366,10 @@ export default function AdminParamsPage() {
                   ) : (
                     historySorted.map((x) => {
                       const isActive = active.some((a) => a.id === x.id);
+                      // Hanya params aktif TERAKHIR yang dikunci: kalau ada lebih dari satu
+                      // baris aktif (state tidak konsisten), admin tetap harus bisa
+                      // mengaktifkan ulang salah satunya atau menghapus duplikatnya.
+                      const isOnlyActive = isActive && active.length === 1;
                       return (
                         <tr key={x.id} className="border-t">
                           <td className="px-3 py-2 text-zinc-800">{x.id}</td>
@@ -378,10 +391,15 @@ export default function AdminParamsPage() {
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => onActivate(x.id)}
-                                disabled={saving || isActive}
+                                disabled={saving || isOnlyActive}
+                                title={
+                                  isOnlyActive
+                                    ? "Params ini sudah satu-satunya yang aktif"
+                                    : "Jadikan params ini satu-satunya yang aktif"
+                                }
                                 className={cn(
                                   "rounded-lg border px-2 py-1 text-xs font-medium",
-                                  isActive
+                                  isOnlyActive
                                     ? "cursor-not-allowed bg-zinc-50 text-zinc-400"
                                     : "text-zinc-700 hover:bg-zinc-50"
                                 )}
@@ -390,15 +408,15 @@ export default function AdminParamsPage() {
                               </button>
                               <button
                                 onClick={() => onDelete(x.id)}
-                                disabled={saving || isActive}
+                                disabled={saving || isOnlyActive}
                                 title={
-                                  isActive
-                                    ? "Nonaktifkan params dulu sebelum menghapus"
+                                  isOnlyActive
+                                    ? "Ini satu-satunya params aktif. Aktifkan params lain dulu sebelum menghapusnya."
                                     : "Hapus params (hanya bisa jika belum pernah dipakai check)"
                                 }
                                 className={cn(
                                   "rounded-lg border px-2 py-1 text-xs font-medium",
-                                  isActive
+                                  isOnlyActive
                                     ? "cursor-not-allowed bg-zinc-50 text-zinc-400 border-zinc-200"
                                     : "border-rose-200 text-rose-700 hover:bg-rose-50"
                                 )}

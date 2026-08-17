@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 export default function LoginPage() {
@@ -87,6 +87,13 @@ export default function LoginPage() {
             {loading ? "Loading..." : "Login"}
           </button>
         </form>
+
+        <div className="mt-5 text-center text-sm text-zinc-600">
+          Belum punya akun?{" "}
+          <Link to="/register" className="font-semibold text-zinc-900 hover:underline">
+            Daftar sebagai mahasiswa
+          </Link>
+        </div>
 
         <div className="mt-6 text-center text-xs text-zinc-400">
           © {new Date().getFullYear()} Plagiarism Detection System

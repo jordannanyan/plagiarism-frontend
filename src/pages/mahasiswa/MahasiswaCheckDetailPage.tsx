@@ -1,7 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
-import { mhGetCheck, type CheckMatchRow, type ExcludedRange } from "../../api/mahasiswa";
+import {
+  mhGetCheck,
+  type CheckMatchRow,
+  type DetectedSourceRow,
+  type ExcludedRange,
+} from "../../api/mahasiswa";
 import { Badge } from "../../components/ui";
 import { MatchSources } from "../../components/MatchSources";
 
@@ -145,12 +150,15 @@ export default function MahasiswaCheckDetailPage() {
   const [check, setCheck] = useState<any>(null);
   const [result, setResult] = useState<any>(null);
   const [matches, setMatches] = useState<CheckMatchRow[]>([]);
+  const [sources, setSources] = useState<DetectedSourceRow[]>([]);
+  const [threshold, setThreshold] = useState<number | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [excludedRanges, setExcludedRanges] = useState<ExcludedRange[]>([]);
   const [excludeMode, setExcludeMode] = useState(true);
 
   const [showPreview, setShowPreview] = useState(true);
-  const matchesLimit = 50;
+  // cukup tinggi supaya highlight tidak terpotong di tengah dokumen
+  const matchesLimit = 1000;
 
   useEffect(() => {
     let alive = true;
@@ -163,6 +171,8 @@ export default function MahasiswaCheckDetailPage() {
         setCheck(res.check);
         setResult(res.result);
         setMatches(res.matches || []);
+        setSources(res.sources ?? []);
+        setThreshold(res.threshold ?? null);
         setPreview(res.doc_preview_text);
         setExcludedRanges(res.excluded_ranges ?? []);
         setExcludeMode(res.exclude_metadata !== false);
@@ -283,7 +293,7 @@ export default function MahasiswaCheckDetailPage() {
       </div>
 
       {/* Sumber terdeteksi (mirip Turnitin) */}
-      {!loading && <MatchSources matches={matches} />}
+      {!loading && <MatchSources sources={sources} matches={matches} threshold={threshold} />}
 
       {/* Preview + highlight */}
       <div className="rounded-2xl border bg-white overflow-hidden">

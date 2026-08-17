@@ -1,12 +1,18 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { User, RoleName } from "../types/auth";
-import { login as loginApi, logout as logoutApi } from "../api/auth";
+import {
+  login as loginApi,
+  logout as logoutApi,
+  register as registerApi,
+  type RegisterPayload,
+} from "../api/auth";
 
 type AuthState = {
   token: string | null;
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
 };
@@ -88,6 +94,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(fixedUser);
   }
 
+  async function register(payload: RegisterPayload) {
+    const res = await registerApi(payload);
+
+    const fixedUser = normalizeUser((res as any).user) ?? null;
+
+    localStorage.setItem("token", (res as any).token);
+    localStorage.setItem("user", JSON.stringify(fixedUser));
+
+    setToken((res as any).token);
+    setUser(fixedUser);
+  }
+
   function updateUser(updates: Partial<User>) {
     setUser((prev) => {
       if (!prev) return prev;
@@ -110,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const value = useMemo(
-    () => ({ token, user, loading, login, logout, updateUser }),
+    () => ({ token, user, loading, login, register, logout, updateUser }),
     [token, user, loading]
   );
 
