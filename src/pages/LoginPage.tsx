@@ -88,13 +88,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-5 text-center text-sm text-zinc-600">
-          Belum punya akun?{" "}
-          <Link to="/register" className="font-semibold text-zinc-900 hover:underline">
-            Daftar sebagai mahasiswa
-          </Link>
-        </div>
-
         <div className="mt-6 text-center text-xs text-zinc-400">
           © {new Date().getFullYear()} Plagiarism Detection System
         </div>
