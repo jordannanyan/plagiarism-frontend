@@ -157,8 +157,7 @@ export default function MahasiswaCheckDetailPage() {
   const [excludeMode, setExcludeMode] = useState(true);
 
   const [showPreview, setShowPreview] = useState(true);
-  // cukup tinggi supaya highlight tidak terpotong di tengah dokumen
-  const matchesLimit = 1000;
+  const matchesLimit = 50;
 
   useEffect(() => {
     let alive = true;
